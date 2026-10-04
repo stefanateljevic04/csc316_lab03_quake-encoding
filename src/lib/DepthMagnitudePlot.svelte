@@ -24,8 +24,6 @@
 	let depthExtent = $derived(d3.extent(earthquakes, (d) => d.depth));
 	let depth95 = $derived(d3.quantile(earthquakes.map((d) => d.depth), 0.95));
 	let versions = $derived([
-		{ id: 'full', title: 'Full observed depth range', domain: depthExtent,
-			color: d3.scaleSequential(d3.interpolateViridis).domain(depthExtent), clamped: false },
 		{ id: 'p95', title: 'Depth capped at the 95th percentile', domain: [depthExtent[0], depth95],
 			color: d3.scaleSequential(d3.interpolateViridis).domain([depthExtent[0], depth95]).clamp(true), clamped: true }
 	]);
@@ -108,8 +106,6 @@
 				</svg>
 				{#if version.clamped}
 					<p>95th-percentile cutoff: {depth95.toFixed(2)} km. All depths at or above this cutoff share the maximum yellow color. The full data remain on the map.</p>
-				{:else}
-					<p>Full observed range: {depthExtent[0].toFixed(2)}–{depthExtent[1].toFixed(2)} km below the surface. Purple represents shallower earthquakes; yellow represents deeper earthquakes.</p>
 				{/if}
 			</section>
 		</div>
