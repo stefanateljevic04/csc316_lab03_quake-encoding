@@ -10,6 +10,15 @@
 	const x = d3.scaleLinear().domain([-180, 180]).range([0, width]);
 	const y = d3.scaleLinear().domain([-90, 90]).range([height, 0]);
 	const radius = d3.scaleSqrt().domain([0, 8.8]).range([0, 30]);
+	const magnitudeTypes = ['mww', 'mb', 'mwb', 'ml'];
+	const shape = d3.scaleOrdinal()
+		.domain(magnitudeTypes)
+		.range([d3.symbolCircle, d3.symbolTriangle, d3.symbolSquare, d3.symbolDiamond]);
+	let presentMagnitudeTypes = $derived(magnitudeTypes.filter((type) => earthquakes.some((quake) => quake.magType === type)));
+	// D3 symbol sizes are areas in square pixels, preserving the existing circle area.
+	function quakeSymbol(magnitude, magnitudeType) {
+		return d3.symbol().type(shape(magnitudeType)).size(Math.PI * radius(magnitude) ** 2)();
+	}
 	// Equirectangular projection matches x(longitude), y(latitude) exactly.
 	// D3's spherical preclip splits geometry at the antimeridian.
 	const projection = d3.geoEquirectangular()
@@ -65,15 +74,15 @@
 		<h2 class="version-title">{version.title}</h2>
 		<svg class="map" viewBox={`0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`} role="img" aria-labelledby={`${version.id}-map-title ${version.id}-map-description`}>
 			<title id={`${version.id}-map-title`}>World map of M6.0+ earthquakes</title>
-			<desc id={`${version.id}-map-description`}>North is at the top. Longitude increases to the right and latitude upward. Circle area represents magnitude, and Viridis color represents depth in kilometers. The Pacific is split at plus or minus 180 degrees longitude.</desc>
+			<desc id={`${version.id}-map-description`}>North is at the top. Longitude increases to the right and latitude upward. Mark area represents magnitude, shape represents magnitude type, and Viridis color represents depth in kilometers. The Pacific is split at plus or minus 180 degrees longitude.</desc>
 			<g transform={`translate(${margin.left}, ${margin.top})`}>
 				<rect width={width} height={height} fill="#f0f5f8" stroke="#c6d2dc" />
 				<path d={landPath} fill="#dce3e5" stroke="#a9b8bc" stroke-width="0.8" />
 				<path d={graticulePath} fill="none" stroke="#bbc9d0" stroke-width="0.5" />
 				{#each earthquakes as quake (quake.id)}
-					<circle cx={x(quake.longitude)} cy={y(quake.latitude)} r={radius(quake.mag)} fill={version.color(quake.depth)} stroke="#fff" stroke-width="0.7">
-						<title>{quake.place}: M{quake.mag}, depth {quake.depth} km; {quake.latitude}° latitude, {quake.longitude}° longitude</title>
-					</circle>
+					<path d={quakeSymbol(quake.mag, quake.magType)} transform={`translate(${x(quake.longitude)}, ${y(quake.latitude)})`} fill={version.color(quake.depth)} stroke="#fff" stroke-width="0.7">
+						<title>{quake.place}: M{quake.mag} ({quake.magType}), depth {quake.depth} km; {quake.latitude}° latitude, {quake.longitude}° longitude</title>
+					</path>
 				{/each}
 			</g>
 		</svg>
@@ -107,6 +116,16 @@
 				{#if version.clamped}
 					<p>95th-percentile cutoff: {depth95.toFixed(2)} km. All depths at or above this cutoff share the maximum yellow color. The full data remain on the map.</p>
 				{/if}
+			</section>
+			<section aria-label="Magnitude type shape legend">
+				<h2>Magnitude type</h2>
+				<svg viewBox="0 0 420 110" role="img" aria-label="Magnitude type: mww circle, mb triangle, mwb square, ml diamond">
+					{#each presentMagnitudeTypes as magnitudeType, index (magnitudeType)}
+						<path d={quakeSymbol(6, magnitudeType)} transform={`translate(${50 + index * 105}, 38)`} fill="#536779" />
+						<text x={50 + index * 105} y="88" text-anchor="middle">{magnitudeType}</text>
+					{/each}
+				</svg>
+				<p>Shape identifies the magnitude-measurement category. All shapes shown here have the area of an M6 circle; equal magnitudes have equal mark areas on the map.</p>
 			</section>
 		</div>
 		<figcaption>M6.0 and larger only. {earthquakes.length} earthquakes · One circle per earthquake. Overlapping circles may hide events. Equirectangular map; the Pacific is split at ±180°. Basemap: World Atlas / Natural Earth, 1:110 million.</figcaption>
